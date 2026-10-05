@@ -1,0 +1,15 @@
+[Unit]
+Description=MediaMTX (teleop WebRTC + local RTSP for the face PiP, §5.3)
+After=network-online.target
+Wants=network-online.target
+[Service]
+User=beni
+ExecStart=/usr/local/bin/mediamtx /etc/mediamtx/mediamtx.yml
+CPUAffinity=2 3
+Nice=5
+OOMScoreAdjust=300
+MemoryLimit=100M
+Restart=always
+RestartSec=3
+[Install]
+WantedBy=multi-user.target

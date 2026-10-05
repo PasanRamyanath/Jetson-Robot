@@ -1,0 +1,15 @@
+[Unit]
+Description=Beni engine scheduler (tegrastats -> admit/pause background jobs, power modes)
+[Service]
+User=beni
+EnvironmentFile=-/etc/beni/beni.env
+# §15.2 fan curve: pwm-fan sysfs is root-only; hand the two knobs to beni.
+ExecStartPre=+/bin/sh -c 'F=/sys/devices/pwm-fan; chown beni $F/target_pwm $F/temp_control || true'
+ExecStart=/opt/beni/.venv38/bin/python -m beni_agent.scheduler
+CPUAffinity=2 3
+MemoryLimit=60M
+OOMScoreAdjust=-300
+Restart=always
+RestartSec=5
+[Install]
+WantedBy=multi-user.target

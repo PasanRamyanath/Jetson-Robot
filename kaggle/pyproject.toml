@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "beni-brain"
+version = "0.1.0"
+description = "Beni cloud brain: websocket gateway, streaming STT/TTS, LLM tool loop, memory learning (Kaggle 2x T4)"
+requires-python = ">=3.10"
+dependencies = [
+    "beni-common[memory]",
+    "websockets>=14",
+    "openai>=1.40",
+    "numpy",
+    "msgpack>=1.0",
+    "onnxruntime",
+    "tokenizers",
+]
+
+[project.optional-dependencies]
+gpu = ["faster-whisper>=1.1", "kokoro>=0.9.4", "misaki[en]", "soundfile", "huggingface_hub"]
+test = ["pytest", "pytest-asyncio"]
+
+[project.scripts]
+beni-brain = "beni_brain.gateway:main"
+
+[tool.setuptools.packages.find]
+include = ["beni_brain*"]

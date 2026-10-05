@@ -1,0 +1,8 @@
+*
+!jetson/docker/patch_slam_toolbox.py
+!jetson/docker/cyclonedds.xml
+!jetson/docker/ros_entrypoint.sh
+!jetson/ros2_ws/src
+!shared/proto
+!shared/schemas.hpp
+**/__pycache__

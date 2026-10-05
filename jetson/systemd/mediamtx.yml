@@ -1,0 +1,18 @@
+# MediaMTX (§5.3): teleop WebRTC for the tailnet + local RTSP for beni_face PiP. Everything else off to save RAM.
+logLevel: warn
+api: no
+metrics: no
+pprof: no
+playback: no
+rtmp: no
+hls: no
+srt: no
+rtsp: yes
+rtspAddress: 127.0.0.1:8554
+webrtc: yes
+webrtcAddress: :8889
+webrtcICEServers2: []            # LAN/Tailscale only; add a TURN server if viewing via the Internet
+paths:
+  teleop:
+    source: udp://127.0.0.1:5000
+    runOnRead: /usr/bin/python3 /opt/beni/jetson/tools/vision_idr.py   # §5.3: keyframe for each new viewer

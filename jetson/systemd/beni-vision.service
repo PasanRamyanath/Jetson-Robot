@@ -1,0 +1,19 @@
+[Unit]
+Description=Beni vision (DeepStream bring-up path; vision_core replaces ExecStart in Phase 3)
+After=nvargus-daemon.service
+Requires=nvargus-daemon.service
+Conflicts=beni-vision-core.service
+[Service]
+User=beni
+Group=video
+Environment=PYTHONUNBUFFERED=1 BENI_DETECTOR=yolo26n
+EnvironmentFile=-/etc/beni/beni.env
+ExecStart=/usr/bin/python3 /opt/beni/jetson/vision/beni_vision.py --config /opt/beni/jetson/vision/configs
+CPUAffinity=1
+Nice=-5
+OOMScoreAdjust=-900
+MemoryLimit=600M
+Restart=always
+RestartSec=2
+[Install]
+WantedBy=multi-user.target

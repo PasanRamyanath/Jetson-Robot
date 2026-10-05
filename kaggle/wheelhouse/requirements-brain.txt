@@ -1,0 +1,17 @@
+# Audio + gateway venv (GPU1). torch comes from the Kaggle-compatible cu12 index via kokoro's dependency.
+websockets>=14
+openai>=1.40
+numpy<2.3
+msgpack>=1.0
+onnxruntime
+tokenizers
+faster-whisper>=1.1
+kokoro>=0.9.4
+misaki[en]
+soundfile
+huggingface_hub
+# Florence-2 (trust_remote_code): its modelling code breaks on transformers >= 4.50
+transformers>=4.46,<4.50
+timm
+einops
+pillow

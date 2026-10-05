@@ -1,0 +1,24 @@
+# ArcFace-trained MobileFaceNet 1x3x112x112 -> 128/512-d. Raw tensor output to the Python probe (§5.4.3).
+# Crops are unaligned here: compensate with more exemplars per person + a margin check (§11.8).
+[property]
+gpu-id=0
+onnx-file=/ssd/beni/models/mobilefacenet_112_b8.onnx
+model-engine-file=/ssd/beni/engines/mobilefacenet_b8_fp16.engine
+batch-size=8
+network-mode=2
+# 100 = "other": no parser, tensor output only
+network-type=100
+output-tensor-meta=1
+process-mode=2
+operate-on-gie-id=2
+operate-on-class-ids=0
+gie-unique-id=3
+input-object-min-width=40
+input-object-min-height=40
+# (x - 127.5) / 128
+net-scale-factor=0.0078125
+offsets=127.5;127.5;127.5
+model-color-format=0
+maintain-aspect-ratio=0
+secondary-reinfer-interval=15
+classifier-async-mode=0

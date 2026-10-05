@@ -1,0 +1,32 @@
+# Face detector as a secondary GIE on person crops (option A, §5.4). YOLOv8n-face (1 class) exported with the
+# DeepStream-Yolo YOLOv8 exporter at 160x160 (landmark head dropped), batch 8.
+[property]
+gpu-id=0
+net-scale-factor=0.0039215697906911373
+model-color-format=0
+onnx-file=/ssd/beni/models/yolov8n_face_160_b8.onnx
+model-engine-file=/ssd/beni/engines/yolov8n_face_b8_fp16.engine
+batch-size=8
+network-mode=2
+num-detected-classes=1
+gie-unique-id=2
+process-mode=2
+operate-on-gie-id=1
+# person
+operate-on-class-ids=0
+# skip tiny far-away people: faces there are useless for identity
+input-object-min-height=120
+network-type=0
+cluster-mode=2
+maintain-aspect-ratio=1
+symmetric-padding=1
+# re-detect the face on a tracked person every 10 frames only
+secondary-reinfer-interval=10
+parse-bbox-func-name=NvDsInferParseYolo
+custom-lib-path=/opt/beni/third_party/DeepStream-Yolo/nvdsinfer_custom_impl_Yolo/libnvdsinfer_custom_impl_Yolo.so
+engine-create-func-name=NvDsInferYoloCudaEngineGet
+
+[class-attrs-all]
+nms-iou-threshold=0.4
+pre-cluster-threshold=0.5
+topk=4

@@ -1,0 +1,90 @@
+<?xml version="1.0"?>
+<!-- §7.4 Beni frames. Plain URDF (no xacro: nothing to run at launch). Mount offsets are nominal: measure yours.
+     base_link = midpoint of the wheel axle on the floor plane; x forward, y left, z up.
+     Wheels: 65 mm (r 0.0325), track 0.170 m (firmware config.h). Head joints are driven by beni_head. -->
+<robot name="beni">
+  <link name="base_link">
+    <visual>
+      <origin xyz="-0.03 0 0.12"/>
+      <geometry><cylinder radius="0.14" length="0.20"/></geometry>
+    </visual>
+  </link>
+
+  <link name="laser"/>
+  <joint name="laser_joint" type="fixed">
+    <parent link="base_link"/><child link="laser"/>
+    <!-- RPLIDAR A1: cable at the back, so the scan frame faces forward. Top plate, ~22 cm up. -->
+    <origin xyz="0.0 0 0.22" rpy="0 0 0"/>
+  </joint>
+
+  <link name="imu_link"/>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/><child link="imu_link"/>
+    <origin xyz="-0.02 0 0.06" rpy="0 0 0"/>
+  </joint>
+
+  <!-- CAM1 body camera (NoIR), fixed, facing forward and tilted 10 degrees down (§5.1). -->
+  <link name="cam1_link"/>
+  <joint name="cam1_joint" type="fixed">
+    <parent link="base_link"/><child link="cam1_link"/>
+    <origin xyz="0.12 0 0.16" rpy="0 0.1745 0"/>
+  </joint>
+  <link name="cam1_optical_frame"/>
+  <joint name="cam1_optical_joint" type="fixed">
+    <parent link="cam1_link"/><child link="cam1_optical_frame"/>
+    <origin xyz="0 0 0" rpy="-1.5708 0 -1.5708"/>
+  </joint>
+
+  <!-- Head: pan (+left) then tilt (+up), PCA9685 servos. CAM0 (colour) sits above the LCD face. -->
+  <link name="head_pan_link"/>
+  <joint name="head_pan_joint" type="revolute">
+    <parent link="base_link"/><child link="head_pan_link"/>
+    <origin xyz="0.0 0 0.30" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-1.4" upper="1.4" effort="1" velocity="3"/>
+  </joint>
+  <link name="head_tilt_link">
+    <visual>
+      <origin xyz="0.02 0 0.04"/>
+      <geometry><box size="0.08 0.12 0.09"/></geometry>
+    </visual>
+  </link>
+  <joint name="head_tilt_joint" type="revolute">
+    <parent link="head_pan_link"/><child link="head_tilt_link"/>
+    <origin xyz="0 0 0.04" rpy="0 0 0"/>
+    <axis xyz="0 -1 0"/>
+    <limit lower="-0.35" upper="0.6" effort="1" velocity="3"/>
+  </joint>
+  <link name="cam0_link"/>
+  <joint name="cam0_joint" type="fixed">
+    <parent link="head_tilt_link"/><child link="cam0_link"/>
+    <origin xyz="0.05 0 0.07" rpy="0 0 0"/>
+  </joint>
+  <link name="cam0_optical_frame"/>
+  <joint name="cam0_optical_joint" type="fixed">
+    <parent link="cam0_link"/><child link="cam0_optical_frame"/>
+    <origin xyz="0 0 0" rpy="-1.5708 0 -1.5708"/>
+  </joint>
+
+  <!-- Ranging (§7.5): VL53L0X cliff sensors look down at the front corners; HC-SR04 pair faces forward. -->
+  <link name="cliff_l_link"/>
+  <joint name="cliff_l_joint" type="fixed">
+    <parent link="base_link"/><child link="cliff_l_link"/>
+    <origin xyz="0.11 0.07 0.03" rpy="0 1.5708 0"/>
+  </joint>
+  <link name="cliff_r_link"/>
+  <joint name="cliff_r_joint" type="fixed">
+    <parent link="base_link"/><child link="cliff_r_link"/>
+    <origin xyz="0.11 -0.07 0.03" rpy="0 1.5708 0"/>
+  </joint>
+  <link name="us_l_link"/>
+  <joint name="us_l_joint" type="fixed">
+    <parent link="base_link"/><child link="us_l_link"/>
+    <origin xyz="0.12 0.05 0.08" rpy="0 0 0.2618"/>
+  </joint>
+  <link name="us_r_link"/>
+  <joint name="us_r_joint" type="fixed">
+    <parent link="base_link"/><child link="us_r_link"/>
+    <origin xyz="0.12 -0.05 0.08" rpy="0 0 -0.2618"/>
+  </joint>
+</robot>

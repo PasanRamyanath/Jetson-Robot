@@ -1,0 +1,15 @@
+[Unit]
+Description=Beni ROS2 Humble container (Nav2, slam_toolbox, EKF, base driver, zmq bridge)
+After=docker.service
+Requires=docker.service
+[Service]
+ExecStartPre=-/usr/bin/docker rm -f beni-ros
+ExecStart=/usr/bin/docker run --name beni-ros --runtime nvidia --network host --ipc host --privileged \
+  --cpuset-cpus 2,3 --oom-score-adj -600 -v /dev:/dev -v /tmp/beni:/tmp/beni -v /ssd/maps:/maps -e ROS_LOCALHOST_ONLY=1 \
+  -e RMW_IMPLEMENTATION=rmw_cyclonedds_cpp -e CYCLONEDDS_URI=file:///ws/cyclonedds.xml \
+  beni-ros:latest ros2 launch beni_bringup robot.launch.py
+ExecStop=/usr/bin/docker stop -t 10 beni-ros
+Restart=always
+RestartSec=5
+[Install]
+WantedBy=multi-user.target

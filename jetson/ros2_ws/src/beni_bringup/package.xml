@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>beni_bringup</name>
+  <version>0.1.0</version>
+  <description>Beni ROS graph (§7.4): composed drivers, slam_toolbox, Nav2 and the ZMQ bridge.</description>
+  <maintainer email="beni@example.com">beni</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <exec_depend>beni_description</exec_depend>
+  <exec_depend>beni_base_driver</exec_depend>
+  <exec_depend>beni_head</exec_depend>
+  <exec_depend>beni_zmq_bridge</exec_depend>
+  <exec_depend>rclcpp_components</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>robot_localization</exec_depend>
+  <exec_depend>slam_toolbox</exec_depend>
+  <exec_depend>sllidar_ros2</exec_depend>
+  <exec_depend>nav2_controller</exec_depend>
+  <exec_depend>nav2_planner</exec_depend>
+  <exec_depend>nav2_behaviors</exec_depend>
+  <exec_depend>nav2_bt_navigator</exec_depend>
+  <exec_depend>nav2_velocity_smoother</exec_depend>
+  <exec_depend>nav2_collision_monitor</exec_depend>
+  <exec_depend>nav2_lifecycle_manager</exec_depend>
+  <exec_depend>nav2_map_server</exec_depend>
+  <exec_depend>nav2_regulated_pure_pursuit_controller</exec_depend>
+  <exec_depend>nav2_navfn_planner</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

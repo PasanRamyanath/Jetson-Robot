@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>beni_head</name>
+  <version>0.1.0</version>
+  <description>Head pan/tilt on a PCA9685 over Jetson I2C bus 1 (§7.5).</description>
+  <maintainer email="beni@example.com">beni</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

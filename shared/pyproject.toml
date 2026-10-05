@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=40.8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "beni-common"
+version = "0.1.0"
+description = "Shared protocol, schemas, HLC and memory store for the Beni robot (Jetson + Kaggle)"
+requires-python = ">=3.6"
+dependencies = ["msgpack>=1.0"]
+
+[project.optional-dependencies]
+memory = ["numpy>=1.19"]
+
+[tool.setuptools]
+packages = ["beni_common", "beni_common.memory"]
+
+[tool.setuptools.package-data]
+"beni_common.memory" = ["schema.sql"]

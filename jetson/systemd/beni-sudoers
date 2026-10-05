@@ -1,0 +1,3 @@
+# /etc/sudoers.d/beni (mode 0440): the agent/scheduler may toggle on-demand services and power modes (and power off at 5 % battery) only; the
+# engine build and bench stop/start the vision unit (the TRT builder needs its RAM).
+beni ALL=(root) NOPASSWD: /bin/systemctl start beni-llm, /bin/systemctl stop beni-llm, /usr/sbin/nvpmodel -m 0, /usr/sbin/nvpmodel -m 1, /usr/sbin/nvpmodel -m 2, /usr/bin/jetson_clocks, /usr/bin/jetson_clocks --restore, /bin/systemctl stop beni-vision, /bin/systemctl start beni-vision, /bin/systemctl stop beni-vision-core, /bin/systemctl start beni-vision-core, /bin/systemctl poweroff

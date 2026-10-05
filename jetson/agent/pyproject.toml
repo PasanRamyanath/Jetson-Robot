@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "beni-agent"
+version = "0.1.0"
+description = "Beni on-robot agent: voice FSM, cloud link, memory, behaviour, scheduler (Jetson, py3.8, CPU)"
+requires-python = ">=3.8"
+
+[tool.setuptools.packages.find]
+include = ["beni_agent*"]

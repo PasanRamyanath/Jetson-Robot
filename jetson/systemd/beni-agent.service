@@ -1,0 +1,24 @@
+[Unit]
+Description=Beni agent (voice FSM, cloud link, memory, behaviour)
+After=beni-audio.service network-online.target
+Wants=beni-audio.service network-online.target
+[Service]
+User=beni
+Environment=PYTHONUNBUFFERED=1 OMP_NUM_THREADS=1
+EnvironmentFile=-/etc/beni/beni.env
+WorkingDirectory=/opt/beni
+# §13.4 GPIO inputs + SPI1 touch: export as root, hand `value` to beni ($$ = shell variables, not systemd's).
+ExecStartPre=+/bin/sh -c 'for n in $${BENI_GPIO_ESTOP:-14} $${BENI_GPIO_MUTE:--1} $${BENI_GPIO_PENIRQ:--1}; do [ "$$n" -ge 0 ] || continue; \
+  G=/sys/class/gpio/gpio$$n; [ -d $$G ] || echo $$n > /sys/class/gpio/export; sleep 0.1; \
+  echo in > $$G/direction; echo both > $$G/edge; chown beni $$G/value; done; chown beni /dev/spidev0.0 2>/dev/null; true'
+ExecStart=/opt/beni/.venv38/bin/python -m beni_agent
+CPUAffinity=2 3
+Nice=5
+OOMScoreAdjust=-300
+MemoryLimit=700M
+Restart=always
+RestartSec=2
+WatchdogSec=30
+NotifyAccess=main
+[Install]
+WantedBy=multi-user.target

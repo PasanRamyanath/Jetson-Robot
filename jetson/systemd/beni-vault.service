@@ -1,0 +1,12 @@
+[Unit]
+Description=Beni vault: LUKS2 container for biometrics + memory (§4 item 58; key on the microSD card)
+After=local-fs.target
+Before=beni-agent.service beni-sched.service
+ConditionPathExists=/ssd/beni-vault.img
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/bash /opt/beni/jetson/setup/09_vault.sh open
+ExecStop=/bin/bash /opt/beni/jetson/setup/09_vault.sh close
+[Install]
+RequiredBy=beni-agent.service beni-sched.service

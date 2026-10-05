@@ -1,0 +1,62 @@
+# ROS 2 Humble container for the Nano (§7.3). Build ON the Nano (docker data-root on the SSD, ≥8 GB swap):
+#   make ros-image            (= docker build -f jetson/docker/Dockerfile.ros -t beni-ros:latest .)
+# The r32.7.1 base runs on L4T 32.7.6 (same userspace ABI); building ROS itself from source on 32.7.6 fails.
+# Two layers: /opt/beni_deps (Nav2 subset, slam_toolbox headless, robot_localization, sllidar; ~1.5-2.5 h, cached)
+# and /opt/beni (our packages, ~5 min). Only what robot.launch.py runs is built: no rviz, Qt, MPPI, Smac, AMCL, DWB.
+FROM dustynv/ros:humble-ros-base-l4t-r32.7.1
+
+SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
+ARG JOBS=2
+ENV DEBIAN_FRONTEND=noninteractive ROS_DISTRO=humble ROS_ROOT=/opt/ros/humble \
+    RMW_IMPLEMENTATION=rmw_cyclonedds_cpp CYCLONEDDS_URI=file:///ws/cyclonedds.xml ROS_LOCALHOST_ONLY=1
+
+# gcc-9: 18.04's gcc-7 has no <filesystem> (Nav2 humble, BT.CPP). libstdc++ from the PPA stays ABI-compatible with
+# the gcc-7-built base, so the underlay does not need rebuilding.
+RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common && \
+    add-apt-repository -y ppa:ubuntu-toolchain-r/test && apt-get update && \
+    apt-get install -y --no-install-recommends g++-9 libzmq3-dev libceres-dev libsuitesparse-dev liblapack-dev \
+      libtbb-dev libeigen3-dev libgraphicsmagick++1-dev libyaml-cpp-dev libgeographic-dev uuid-dev libncurses5-dev \
+      libboost-system-dev libboost-serialization-dev libboost-filesystem-dev libboost-thread-dev \
+      libboost-program-options-dev && \
+    apt-get purge -y software-properties-common && apt-get autoremove -y && rm -rf /var/lib/apt/lists/* && \
+    (pip3 install --no-cache-dir -U rosinstall_generator vcstool || true)
+
+ENV CC=gcc-9 CXX=g++-9
+ARG CMAKE_ARGS="-DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF -DCMAKE_C_COMPILER=gcc-9 -DCMAKE_CXX_COMPILER=g++-9 \
+ -DCMAKE_C_FLAGS=-mcpu=cortex-a57 -DCMAKE_CXX_FLAGS=-mcpu=cortex-a57 -DCMAKE_EXE_LINKER_FLAGS=-s \
+ -DCMAKE_SHARED_LINKER_FLAGS=-s -DCMAKE_MODULE_LINKER_FLAGS=-s"
+
+# ---------------------------------------------------------------- dependency layer
+WORKDIR /deps
+COPY jetson/docker/patch_slam_toolbox.py /deps/
+RUN source ${ROS_ROOT}/install/setup.bash && mkdir -p src && \
+    ROS_PACKAGE_PATH=${ROS_ROOT}/install/share rosinstall_generator --deps --exclude RPP --rosdistro humble \
+      nav2_bt_navigator nav2_controller nav2_planner nav2_behaviors nav2_lifecycle_manager nav2_map_server \
+      nav2_navfn_planner nav2_regulated_pure_pursuit_controller nav2_velocity_smoother nav2_collision_monitor \
+      robot_localization interactive_markers rmw_cyclonedds_cpp > deps.rosinstall && \
+    vcs import --shallow src < deps.rosinstall && \
+    git clone --depth 1 -b humble https://github.com/SteveMacenski/slam_toolbox.git src/slam_toolbox && \
+    git clone --depth 1 https://github.com/Slamtec/sllidar_ros2.git src/sllidar_ros2 && \
+    python3 patch_slam_toolbox.py src/slam_toolbox && \
+    MAKEFLAGS=-j${JOBS} colcon build --merge-install --install-base /opt/beni_deps --parallel-workers 1 \
+      --event-handlers console_cohesion+ --cmake-args ${CMAKE_ARGS} \
+      --packages-up-to nav2_bt_navigator nav2_controller nav2_planner nav2_behaviors nav2_lifecycle_manager \
+        nav2_map_server nav2_navfn_planner nav2_regulated_pure_pursuit_controller nav2_velocity_smoother \
+        nav2_collision_monitor robot_localization slam_toolbox sllidar_ros2 \
+        $(grep -q "rmw_cyclonedds" deps.rosinstall && echo rmw_cyclonedds_cpp) && \
+    rm -rf /deps/build /deps/log /deps/src /root/.cache
+
+# ---------------------------------------------------------------- beni layer
+WORKDIR /ws
+COPY shared/proto /ws/shared/proto
+COPY shared/schemas.hpp /ws/shared/schemas.hpp
+COPY jetson/ros2_ws/src /ws/src
+COPY jetson/docker/cyclonedds.xml /ws/cyclonedds.xml
+COPY jetson/docker/ros_entrypoint.sh /ros_entrypoint.sh
+RUN source /opt/beni_deps/setup.bash && \
+    MAKEFLAGS=-j${JOBS} colcon build --merge-install --install-base /opt/beni --event-handlers console_cohesion+ \
+      --cmake-args ${CMAKE_ARGS} -DBENI_SHARED_DIR=/ws/shared && \
+    rm -rf /ws/build /ws/log && chmod +x /ros_entrypoint.sh
+
+ENTRYPOINT ["/ros_entrypoint.sh"]
+CMD ["ros2", "launch", "beni_bringup", "robot.launch.py"]

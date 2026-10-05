@@ -1,0 +1,16 @@
+[Unit]
+Description=Beni face (HDMI LCD: DRM planes + NVDEC expression clips, §3.11)
+# nvdrmvideosink needs the display without X: 01_system_tune.sh sets multi-user.target
+Conflicts=display-manager.service
+[Service]
+User=beni
+Group=video
+ExecStart=/opt/beni/jetson/face/build/beni_face --dir /ssd/face
+CPUAffinity=0
+Nice=-2
+OOMScoreAdjust=-500
+MemoryLimit=120M
+Restart=always
+RestartSec=2
+[Install]
+WantedBy=multi-user.target

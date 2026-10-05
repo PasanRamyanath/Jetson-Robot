@@ -1,0 +1,40 @@
+# §7.4 Beni's own nodes. Loaded into the one container, so every node in the process sees this file.
+base_driver:
+  ros__parameters:
+    port: /dev/ttyTHS1
+    baud: 921600
+    v_max: 0.5
+    w_max: 2.5
+    battery_cells: 3
+    cmd_rate: 50.0
+    mux:
+      names: [teleop, safety, nav, behaviour]
+      priorities: [100, 90, 50, 30]
+      timeouts: [0.5, 0.3, 0.5, 0.5]
+
+head:
+  ros__parameters:
+    i2c_dev: /dev/i2c-1
+    address: 64
+    rate: 50.0
+    relax_after: 5.0
+
+zmq_bridge:
+  ros__parameters:
+    cam_frames: [cam0_optical_frame, cam1_optical_frame]
+    hfov_deg: [62.2, 62.2]        # RPi V2 at the 1280x720 mode; calibrate if boxes land off-target
+    det_w: 512.0
+    det_h: 288.0
+    v_max: 0.4
+    w_max: 1.2
+    front_stop: 0.3
+    follow:
+      distance: 1.0
+      kv: 0.8
+      kw: 1.8
+    map_path: /maps/home
+    map_autosave_s: 600.0
+
+robot_state_publisher:
+  ros__parameters:
+    publish_frequency: 20.0

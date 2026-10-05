@@ -1,0 +1,2 @@
+# LLM venv (GPU0). vLLM 0.10.x still ships sm75 kernels and the V1 Triton attention backend used on T4.
+vllm>=0.10.1,<0.11

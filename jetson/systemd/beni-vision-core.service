@@ -1,0 +1,24 @@
+[Unit]
+Description=Beni vision_core (§5.5 Phase 3: Argus + VIC + TensorRT + NVENC; drop-in for beni-vision)
+After=nvargus-daemon.service
+Requires=nvargus-daemon.service
+Conflicts=beni-vision.service
+[Service]
+User=beni
+Group=video
+# §6.4 detector: yolo26n (primary) | yolov8n; override in beni.env after the bake-off
+Environment=BENI_DETECTOR=yolo26n
+EnvironmentFile=-/etc/beni/beni.env
+# IR ring PWM on header pin 32 (pinmux it once with jetson-io); root-only export, then hand it to beni.
+ExecStartPre=+/bin/sh -c 'P=/sys/class/pwm/pwmchip0; [ -d $P/pwm0 ] || echo 0 > $P/export; sleep 0.2; \
+  chown beni $P/pwm0/period $P/pwm0/duty_cycle $P/pwm0/enable || true'
+ExecStart=/opt/beni/jetson/vision_core/build/vision_core --engines /ssd/beni/engines --rec-dir /ssd/beni/rec \
+  --det ${BENI_DETECTOR}
+CPUAffinity=1 2 3
+Nice=-5
+OOMScoreAdjust=-900
+MemoryLimit=400M
+Restart=always
+RestartSec=2
+[Install]
+WantedBy=multi-user.target

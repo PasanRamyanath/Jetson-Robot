@@ -1,0 +1,11 @@
+# beni_agent, Python 3.8 venv on the Jetson (CPU only). Install via jetson/setup/05_py38_venv.sh.
+numpy==1.24.4
+pyzmq>=25,<27
+msgpack>=1.0.7
+websockets==13.1
+onnxruntime==1.16.3
+tokenizers>=0.15,<0.21
+sherpa-onnx>=1.10
+kaggle>=1.6,<1.7
+huggingface_hub>=0.23,<0.27
+# optional: opuslib==3.0.1 (apt libopus0) for the ~24 kbps uplink; pcm16 is used when absent

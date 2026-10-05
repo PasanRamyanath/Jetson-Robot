@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>beni_base_driver</name>
+  <version>0.1.0</version>
+  <description>ESP32 base link (§7.5): odometry, IMU, battery, ranges, velocity mux, e-stop.</description>
+  <maintainer email="beni@example.com">beni</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>std_srvs</depend>
+  <export><build_type>ament_cmake</build_type></export>
+</package>

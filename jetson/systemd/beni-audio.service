@@ -1,0 +1,18 @@
+[Unit]
+Description=Beni audio I/O (APE I2S4, AEC, RTP to agent)
+After=sound.target
+[Service]
+User=beni
+Group=audio
+ExecStartPre=/opt/beni/jetson/setup/06_ahub_routing.sh
+ExecStart=/opt/beni/jetson/audio/audio_io.sh
+CPUAffinity=0
+CPUSchedulingPolicy=fifo
+CPUSchedulingPriority=70
+LimitRTPRIO=90
+LimitMEMLOCK=infinity
+OOMScoreAdjust=-900
+Restart=always
+RestartSec=1
+[Install]
+WantedBy=multi-user.target
