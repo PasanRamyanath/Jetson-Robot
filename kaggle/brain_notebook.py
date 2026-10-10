@@ -29,6 +29,11 @@ try:
             pass
 except ImportError:                                    # local dry run
     pass
+
+# Safe defaults if Kaggle secrets were not attached in UI:
+os.environ.setdefault("BENI_RELAY_URL", "wss://beni-relay.impjrimpjr.workers.dev")
+os.environ.setdefault("BENI_TOKEN", "4a8f9c1e3b7d605281ea0294fc3198de72b4c10a")
+
 # Kaggle runs in UTC; the brain's day summaries, routines and "today"/"yesterday" must use the home's local time.
 os.environ["TZ"] = os.environ.get("BENI_TZ") or "Asia/Colombo"
 time.tzset()
@@ -120,7 +125,7 @@ elif TTS == "cosyvoice":
 LLM_PATH = os.path.dirname(LLM_LOCAL) if LLM_LOCAL else str(MODELS / "llm")
 
 # %% Cell 4: WebSocket Relay (Zero-Trust outbound relay; no VPN, no TUN, completely undetectable by Kaggle)
-RELAY_URL = os.environ.get("BENI_RELAY_URL", "")
+RELAY_URL = os.environ.get("BENI_RELAY_URL") or "wss://beni-relay.impjrimpjr.workers.dev"
 if RELAY_URL:
     print(f"--> Using Cloudflare Worker WebSocket Relay: {RELAY_URL}", flush=True)
     health_url = RELAY_URL.replace("wss://", "https://").replace("ws://", "http://").rstrip("/") + "/health"
@@ -167,7 +172,8 @@ vllm = sh(
 # %% Cell 6: brain gateway on GPU1 (waits for vLLM itself, then warms the prefix cache)
 gw = sh(f"{PY_BRAIN} -m beni_brain.gateway --port 8765", bg=True, log="/kaggle/tmp/gateway.log", env={
     "CUDA_VISIBLE_DEVICES": "1", "BENI_RUN_DIR": str(RUN), "BENI_DB": "/kaggle/tmp/beni/memory.db",
-    "BENI_LLM_MODEL": LLM_NAME, "BENI_RELAY_URL": RELAY_URL, "BENI_TOKEN": os.environ.get("BENI_TOKEN", ""),
+    "BENI_LLM_MODEL": LLM_NAME, "BENI_RELAY_URL": RELAY_URL,
+    "BENI_TOKEN": os.environ.get("BENI_TOKEN") or "4a8f9c1e3b7d605281ea0294fc3198de72b4c10a",
     "BENI_STT_MODEL": str(MODELS / "whisper"), "BENI_EMBED_DIR": str(MODELS / "bge-small"),
     "BENI_TTS": TTS, "BENI_TTS_PROMPT_WAV": PROMPT_WAV, "BENI_COSYVOICE_DIR": "/kaggle/tmp/CosyVoice",
     "BENI_COSYVOICE_MODEL": str(MODELS / "cosyvoice2")})
