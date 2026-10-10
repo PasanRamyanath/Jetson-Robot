@@ -1,0 +1,23 @@
+# Credentials & Secrets
+kaggle.json
+*.env
+!*.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv*/
+venv/
+dist/
+build/
+*.egg-info/
+
+# Wrangler & Node
+.wrangler/
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db
