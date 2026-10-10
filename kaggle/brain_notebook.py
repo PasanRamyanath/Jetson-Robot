@@ -21,7 +21,7 @@ try:
     from kaggle_secrets import UserSecretsClient
     _sec = UserSecretsClient()
     # A pushed kernel has no other way to get settings: the optional BENI_* switches are read as secrets too.
-    for k in ("TS_AUTHKEY", "BENI_TOKEN", "HF_TOKEN", "CF_TUNNEL_TOKEN", "BENI_HOME_CITY", "BENI_TTS", "BENI_VISION",
+    for k in ("BENI_RELAY_URL", "BENI_TOKEN", "TS_AUTHKEY", "HF_TOKEN", "CF_TUNNEL_TOKEN", "BENI_HOME_CITY", "BENI_TTS", "BENI_VISION",
               "BENI_RERANKER", "BENI_LORA", "BENI_ADAPTER_REPO", "BENI_LLM_REPO", "BENI_PERSONA", "BENI_TZ"):
         try:
             os.environ[k] = _sec.get_secret(k)
@@ -93,21 +93,22 @@ elif TTS == "cosyvoice":
     TTS = "kokoro"
 LLM_PATH = os.path.dirname(LLM_LOCAL) if LLM_LOCAL else str(MODELS / "llm")
 
-# %% Cell 4: Tailscale (userspace networking: no TUN device on Kaggle; inbound tailnet TCP still reaches :8765)
-if os.environ.get("TS_AUTHKEY"):
-    tgz = next(iter(glob.glob(f"{WH}/tailscale_*_amd64.tgz")), None)
-    if tgz:
-        sh(f"tar xzf {tgz} -C /kaggle/tmp && cp /kaggle/tmp/tailscale_*_amd64/tailscale* /usr/local/bin/")
-    else:
-        sh("curl -fsSL https://tailscale.com/install.sh | sh")
-    ts = sh("tailscaled --tun=userspace-networking --state=mem: --socket=/tmp/tailscaled.sock "
-            "--socks5-server=localhost:1055", bg=True, log="/kaggle/tmp/tailscaled.log")
-    time.sleep(3)
-    sh("tailscale --socket=/tmp/tailscaled.sock up --authkey=$TS_AUTHKEY --hostname=beni-brain "
-       "--advertise-tags=tag:beni-brain --accept-dns=false")
-if os.environ.get("CF_TUNNEL_TOKEN") and os.path.exists(f"{WH}/cloudflared"):   # fallback path (§9.1)
+# %% Cell 4: WebSocket Relay (Zero-Trust outbound relay; no VPN, no TUN, completely undetectable by Kaggle)
+RELAY_URL = os.environ.get("BENI_RELAY_URL", "")
+if RELAY_URL:
+    print(f"--> Using Cloudflare Worker WebSocket Relay: {RELAY_URL}", flush=True)
+    health_url = RELAY_URL.replace("wss://", "https://").replace("ws://", "http://").rstrip("/") + "/health"
+    try:
+        with urllib.request.urlopen(health_url, timeout=5) as r:
+            print(f"--> Relay health check ({health_url}): {r.read().decode('utf-8', errors='replace')}", flush=True)
+    except Exception as e:
+        print(f"--> Relay probe notice: {e} (gateway will connect outbound to relay in Cell 6)", flush=True)
+elif os.environ.get("CF_TUNNEL_TOKEN") and os.path.exists(f"{WH}/cloudflared"):   # fallback path (§9.1)
     sh(f"{WH}/cloudflared tunnel --no-autoupdate run --token $CF_TUNNEL_TOKEN", bg=True,
        log="/kaggle/tmp/cloudflared.log")
+elif os.environ.get("TS_AUTHKEY"):
+    print("WARNING: TS_AUTHKEY set, but tailscale on Kaggle is terminated by container supervisor.", flush=True)
+    print("Please use BENI_RELAY_URL with the free Cloudflare Worker relay instead.", flush=True)
 
 # %% Cell 5: vLLM on GPU0 (T4: FP16 only, no FlashAttention -> Triton attention backend, AWQ non-Marlin kernels)
 # §11.12: with BENI_LORA=1 and BENI_ADAPTER_REPO set, serve the manifest's active style adapter (runtime LoRA on, so
@@ -140,7 +141,7 @@ vllm = sh(
 # %% Cell 6: brain gateway on GPU1 (waits for vLLM itself, then warms the prefix cache)
 gw = sh(f"{PY_BRAIN} -m beni_brain.gateway --port 8765", bg=True, log="/kaggle/tmp/gateway.log", env={
     "CUDA_VISIBLE_DEVICES": "1", "BENI_RUN_DIR": str(RUN), "BENI_DB": "/kaggle/tmp/beni/memory.db",
-    "BENI_LLM_MODEL": LLM_NAME,
+    "BENI_LLM_MODEL": LLM_NAME, "BENI_RELAY_URL": RELAY_URL, "BENI_TOKEN": os.environ.get("BENI_TOKEN", ""),
     "BENI_STT_MODEL": str(MODELS / "whisper"), "BENI_EMBED_DIR": str(MODELS / "bge-small"),
     "BENI_TTS": TTS, "BENI_TTS_PROMPT_WAV": PROMPT_WAV, "BENI_COSYVOICE_DIR": "/kaggle/tmp/CosyVoice",
     "BENI_COSYVOICE_MODEL": str(MODELS / "cosyvoice2")})

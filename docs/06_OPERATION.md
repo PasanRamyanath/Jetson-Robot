@@ -111,8 +111,8 @@ pc$ python jetson/tools/lerobot_export.py raw rec beni_demos        # appends ne
 
 ## 6.7 Brain
 
-- **Is it up?** `curl -s http://beni-brain:8765/health`, `tailscale status | grep beni-brain`, or
-  `sudo -u beni /opt/beni/.venv38/bin/kaggle kernels status <you>/beni-brain`.
+- **Is it up?** `curl -s https://<relay-url>/health` (shows `brain_connected: true`),
+  or `sudo -u beni /opt/beni/.venv38/bin/kaggle kernels status <you>/beni-brain`.
 - **Start it now:** say the wake word, which keeps it up for 30 min, or `make kaggle-push KAGGLE_KERNEL=<you>/beni-brain`.
 - **Weekly usage** is kept in the memory DB (`lifecycle.used_s.<year>-W<week>`). Change the cap with
   `BENI_WEEKLY_BUDGET_H`.

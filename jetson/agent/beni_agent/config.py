@@ -89,9 +89,22 @@ class Config:
     def from_env(cls):
         load_env_file()
         urls = _env("BENI_BRAIN_URLS") or _env("BENI_BRAIN_URL", "ws://beni-brain:8765/ws")
+
+        def _norm_ws(u):
+            u = u.strip()
+            if u.startswith("https://"):
+                u = "wss://" + u[8:]
+            elif u.startswith("http://"):
+                u = "ws://" + u[7:]
+            parts = u.split("?", 1)
+            base = parts[0].rstrip("/")
+            if base.count("/") == 2:
+                base += "/robot"
+            return "%s?%s" % (base, parts[1]) if len(parts) > 1 else base
+
         return cls(
             token=_env("BENI_TOKEN", ""),
-            brain_urls=[u.strip() for u in urls.split(",") if u.strip()],
+            brain_urls=[_norm_ws(u) for u in urls.split(",") if u.strip()],
             uplink=_env("BENI_UPLINK", "pcm16"),
             db=_env("BENI_DB", cls.db),
             models=_env("BENI_MODELS", cls.models),

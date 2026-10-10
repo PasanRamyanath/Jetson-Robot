@@ -43,7 +43,7 @@ jetson/
 kaggle/
   beni_brain/              gateway.py (websockets), session.py (turn pipeline), stt.py, tts.py, llm.py, tools.py, vision_tools.py, prompts.py,
                            memory/ (mirror, extract, consolidate), shutdown.py
-  brain_notebook.py        the Kaggle script kernel (venvs, tailscale, vLLM, gateway, keep-alive, clean exit)
+  brain_notebook.py        the Kaggle script kernel (venvs, Cloudflare relay, vLLM, gateway, keep-alive, clean exit)
   kernel-metadata.json     T4×2, internet on; the Jetson rewrites the ids from KAGGLE_KERNEL on push
   wheelhouse/              offline wheel dataset builder
 firmware/base_esp32/       ESP-IDF 5.3 motor/sensor MCU (PID, encoders, bumpers, cliffs, VL53L0X, battery, watchdog)
@@ -62,7 +62,7 @@ make brain-stub    # local brain on 127.0.0.1:8765 for poking at the agent
 ## Deploy
 
 **Brain (once, then automatic):**
-1. Add Kaggle Secrets: `BENI_TOKEN`, `TS_AUTHKEY` (tagged `tag:beni-brain`), and optionally `HF_TOKEN` and `CF_TUNNEL_TOKEN`.
+1. Add Kaggle Secrets: `BENI_TOKEN`, `BENI_RELAY_URL` (`wss://beni-relay.<user>.workers.dev`), and optionally `HF_TOKEN` and `CF_TUNNEL_TOKEN`.
 2. `make wheelhouse-push` on a Linux or Docker machine uploads `<you>/beni-wheelhouse` (required: the kernel installs offline from it).
 3. Set `KAGGLE_KERNEL=<you>/beni-brain` in `/etc/beni/beni.env`. The Jetson's lifecycle manager pushes the kernel during awake hours or on the wake word. It asks the brain to stop (`brain.stop`) when idle or when the weekly budget runs out. The brain then consolidates memory, flushes deltas and exits.
 
@@ -70,7 +70,7 @@ make brain-stub    # local brain on 127.0.0.1:8765 for poking at the agent
 ```bash
 sudo make ssd-root PART=/dev/sda1 CONFIRM=1 && sudo reboot
 sudo make jetson-install     # /opt/beni -> repo, user, units, env, sudoers
-TS_AUTHKEY=tskey-... make jetson-setup && sudo reboot   # then jetson-io: i2s4, pwm0, spi1
+make jetson-setup && sudo reboot   # then jetson-io: i2s4, pwm0, spi1 (optional TS_AUTHKEY for remote PC ssh)
 make llama models engines ros-image face
 sudoedit /etc/beni/beni.env && sudo systemctl start beni-agent beni-sched
 ```

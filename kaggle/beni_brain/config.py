@@ -11,6 +11,7 @@ def _env(k, d=None):
 @dataclass
 class Config:
     token: str = ""
+    relay_url: str = ""                              # Cloudflare Worker relay, e.g. wss://beni-relay.<user>.workers.dev
     host: str = "0.0.0.0"
     port: int = 8765
     run_dir: str = "/kaggle/working/beni"
@@ -42,6 +43,7 @@ class Config:
         stub = _env("BENI_STUB", "0") == "1"
         c = cls(
             token=_env("BENI_TOKEN", ""),
+            relay_url=_env("BENI_RELAY_URL", ""),
             host=_env("BENI_HOST", "0.0.0.0"),
             port=int(_env("BENI_PORT", "8765")),
             run_dir=_env("BENI_RUN_DIR", "/kaggle/working/beni"),

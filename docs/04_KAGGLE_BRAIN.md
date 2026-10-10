@@ -4,7 +4,7 @@ The brain is a private Kaggle **batch kernel** (`kaggle/brain_notebook.py`):
 - **GPU0:** vLLM Qwen2.5-VL-7B-AWQ.
 - **GPU1:** faster-whisper, Kokoro or CosyVoice2, and Florence-2.
 
-It joins the tailnet as `beni-brain` and serves `ws://beni-brain:8765/ws`. You never start it by hand: the
+It connects outbound to the **Cloudflare Worker WebSocket Relay** (`BENI_RELAY_URL`). You never start it by hand: the
 Jetson's lifecycle manager pushes it during awake hours or on the wake word, and asks it to stop when idle. A
 session is at most 11.5 h, and the weekly budget defaults to 28 h (`BENI_WEEKLY_BUDGET_H`).
 
@@ -14,12 +14,19 @@ session is at most 11.5 h, and the weekly budget defaults to 28 h (`BENI_WEEKLY_
 2. Go to kaggle.com → Settings → API → **Create New Token**. This downloads `kaggle.json`. Keep it for the PC
    (`~/.kaggle/kaggle.json`, mode 600) and for the Nano ([02 §2.11](02_JETSON_SETUP.md#211-configure-and-start)).
 
-## 4.2 Tailscale key for the brain
+## 4.2 Cloudflare Worker WebSocket Relay (100% Free, Non-VPN)
 
-In the Tailscale admin console, create an auth key that is **ephemeral, reusable, pre-approved** and tagged
-`tag:beni-brain`. Ephemeral means each finished session removes its own node. The ACL from
-[02 §2.4](02_JETSON_SETUP.md#24-system-tuning-docker-tailscale-the-py38-venv-mediamtx-and-deepstream-yolo)
-already allows `tag:beni-jetson` → `tag:beni-brain:8765` and nothing else.
+Kaggle's host supervisor strictly blocks and terminates VPN daemons like `tailscaled` within seconds.
+Instead, Beni uses a **free, permanent, zero-trust Cloudflare Worker WebSocket Relay** (`cloudflare/worker.js`):
+1. Create a free account at [dash.cloudflare.com](https://dash.cloudflare.com) (no credit card or domain required).
+2. Go to **Compute (Workers) > Workers & Pages** -> **Create Application** -> **Create Worker**.
+3. Name it `beni-relay`, click **Deploy**, then **Edit code**.
+4. Paste the code from `cloudflare/worker.js` and click **Save and deploy**.
+5. Under **Settings > Bindings**, add a Durable Object binding: variable `RELAY`, class `BeniRelay`.
+6. Your permanent relay URL is: `wss://beni-relay.<your-subdomain>.workers.dev`.
+
+Both the Jetson Nano and the Kaggle Brain make standard **outbound** WebSocket connections to this relay,
+completely bypassing Kaggle's VPN detection with minimal latency (~20–40 ms).
 
 ## 4.3 Kaggle Secrets
 
@@ -28,10 +35,10 @@ own, so this is a one-time step. The pushed kernel reads them all at start-up.
 
 | Secret | Required | Value |
 |---|---|---|
-| `BENI_TOKEN` | yes | the same string as `BENI_TOKEN` in `/etc/beni/beni.env` |
-| `TS_AUTHKEY` | yes | the `tag:beni-brain` key from 4.2 |
+| `BENI_TOKEN` | yes | the shared secret string matching `BENI_TOKEN` in `/etc/beni/beni.env` |
+| `BENI_RELAY_URL` | yes | `wss://beni-relay.<your-subdomain>.workers.dev` (from 4.2) |
 | `HF_TOKEN` | recommended | HF read token (faster, unthrottled model downloads); write access if you use `BENI_LORA` |
-| `CF_TUNNEL_TOKEN` | no | Cloudflare tunnel fallback (§9.1); the Nano then also needs `BENI_BRAIN_URLS=...,wss://<host>/ws` |
+| `CF_TUNNEL_TOKEN` | no | Cloudflare named tunnel token fallback (§9.1) |
 | `BENI_TTS` | no | `kokoro` (default) or `cosyvoice` (4.6) |
 | `BENI_VISION` | no | `none` turns off Florence-2 (`locate`, replay captions) |
 | `BENI_RERANKER` | no | `none` turns off the bge-reranker-v2-m3 memory rerank (§11.6) |
@@ -68,10 +75,11 @@ pc$ kaggle kernels status <you>/beni-brain            # queued -> running
 
 Then:
 1. Open the kernel's log on kaggle.com. Within ~10–15 min it prints `brain READY after N s`.
-2. On the Nano, run `tailscale status | grep beni-brain`, then:
+2. Check relay status from your browser or terminal:
 
 ```bash
-nano$ curl -s http://beni-brain:8765/health
+curl -s https://beni-relay.<your-subdomain>.workers.dev/health
+# {"status": "ok", "brain_connected": true, "robot_connected": true, ...}
 nano$ journalctl -u beni-agent -f            # "link up", then say the wake word
 ```
 
@@ -110,7 +118,7 @@ Outside the awake hours, the wake word cold-starts the brain for 30 min. Meanwhi
 | Symptom | Check |
 |---|---|
 | `kaggle push failed` in the agent journal | `sudo -u beni /opt/beni/.venv38/bin/kaggle kernels list -m` (key path, phone verification) |
-| Kernel runs but the Nano never connects | the kernel log's `tailscale up` line; the ACL; `BENI_TOKEN` equal on both sides |
+| Kernel runs but the Nano never connects | check `https://<relay-url>/health`; verify `BENI_RELAY_URL` in Kaggle secrets and `BENI_TOKEN` matches in `/etc/beni/beni.env` |
 | `brain FAILED` in the kernel log | `/kaggle/tmp/vllm.log` and `gateway.log` in the kernel output; usually an HF download (set `HF_TOKEN`) |
 | `uv pip install` fails at once | the `beni-wheelhouse` dataset is missing or stale: `make wheelhouse-push` |
 | A secret seems empty | it isn't attached to the notebook (4.3) |

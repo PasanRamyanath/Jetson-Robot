@@ -1,0 +1,12 @@
+name = "beni-relay"
+main = "worker.js"
+compatibility_date = "2024-04-01"
+
+[durable_objects]
+bindings = [
+  { name = "RELAY", class_name = "BeniRelay" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["BeniRelay"]

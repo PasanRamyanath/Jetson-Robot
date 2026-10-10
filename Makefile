@@ -15,7 +15,7 @@ PY    ?= python3
 UNITS := beni-agent beni-sched beni-audio beni-vision beni-vision-core beni-face beni-ros beni-llm beni-vault
 KERNEL_DIR := $(ROOT)/kaggle
 
-.PHONY: test lint e2e jetson-install jetson-setup models engines llama face face-clips vault vision-core bench emmc-boot-check emmc-boot-sync ros-image wheelhouse wheelhouse-push kaggle-push brain-stub status ssd-root
+.PHONY: test lint e2e jetson-install jetson-uninstall jetson-setup models engines llama face face-clips vault vision-core bench emmc-boot-check emmc-boot-sync ros-image wheelhouse wheelhouse-push kaggle-push brain-stub status ssd-root
 
 test:
 	$(PY) -m pytest -q
@@ -44,6 +44,16 @@ jetson-install:
 	systemctl daemon-reload
 	systemctl enable beni-audio beni-vision beni-face beni-ros beni-agent beni-sched    # beni-llm is on demand
 	@echo "edit /etc/beni/beni.env, then: sudo systemctl start beni-agent"
+
+jetson-uninstall:               ## stop and remove all beni systemd units, configs, and symlinks
+	@[ "$$(id -u)" = 0 ] || { echo "run with sudo"; exit 1; }
+	systemctl stop $(UNITS) mediamtx 2>/dev/null || true
+	systemctl disable $(UNITS) mediamtx 2>/dev/null || true
+	for u in $(UNITS); do rm -f /etc/systemd/system/$$u.service; done
+	rm -f /etc/systemd/system/mediamtx.service /etc/tmpfiles.d/beni.conf /etc/sudoers.d/beni
+	systemctl daemon-reload
+	rm -f /opt/beni
+	@echo "Beni system services uninstalled. (/ssd/beni and /etc/beni preserved; remove by hand if desired)"
 
 ssd-root:                       ## once, before jetson-setup: make ssd-root PART=/dev/sda1, then reboot
 	sudo CONFIRM=$(CONFIRM) bash jetson/setup/02_root_on_ssd.sh $(PART)

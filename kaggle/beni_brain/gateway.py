@@ -27,6 +27,7 @@ from .memory import consolidate
 from .memory.extract import Extractor
 from .memory.mirror import Mirror
 from .memory.rerank import Reranker
+from .relay import RelayBridge
 from .session import Session
 
 log = logging.getLogger("gateway")
@@ -218,6 +219,9 @@ async def amain(cfg):
         log.info("listening on %s:%d", cfg.host, cfg.port)
         brain.spawn(brain.warmup())
         brain.spawn(brain.maintenance())
+        if cfg.relay_url:
+            bridge = RelayBridge(cfg.relay_url, cfg.token, cfg.port)
+            brain.spawn(bridge.run())
         await brain.stop_event.wait()
         await brain.shutdown()
     try:
@@ -231,11 +235,12 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--port", type=int)
     ap.add_argument("--host")
+    ap.add_argument("--relay", help="Cloudflare Worker relay URL (e.g. wss://beni-relay.<user>.workers.dev)")
     ap.add_argument("--stub", action="store_true", help="stub STT/TTS/LLM (no GPU)")
     a = ap.parse_args(argv)
     if a.stub:
         os.environ["BENI_STUB"] = "1"
-    over = {k: v for k, v in (("port", a.port), ("host", a.host)) if v}
+    over = {k: v for k, v in (("port", a.port), ("host", a.host), ("relay_url", a.relay)) if v}
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname).1s %(name)s: %(message)s")
     return asyncio.run(amain(Config.from_env(**over)))
 

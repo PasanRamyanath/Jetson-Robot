@@ -232,18 +232,17 @@ This step:
 - copies the settings template to `/etc/beni/beni.env`;
 - installs and enables the systemd services.
 
-**C5. Make a Tailscale key.** Tailscale is the private network the robot and the cloud brain use to find each other:
+**C5. (Optional) Make a Tailscale key for remote access from your PC.** Tailscale lets you reach the robot from your PC anywhere as `beni-jetson` (the robot and cloud brain connect over the Cloudflare Worker Relay, Part G):
 1. Make a free account at tailscale.com.
 2. In the admin console, create an auth key that is **reusable** and **pre-approved**, with the tag `tag:beni-jetson`.
 3. In Access Controls, paste this:
 
 ```json
-"tagOwners": {"tag:beni-jetson": ["autogroup:admin"], "tag:beni-brain": ["autogroup:admin"]},
-"acls": [{"action": "accept", "src": ["tag:beni-jetson"], "dst": ["tag:beni-brain:8765"]},
-         {"action": "accept", "src": ["autogroup:admin"], "dst": ["tag:beni-jetson:22,8889"]}]
+"tagOwners": {"tag:beni-jetson": ["autogroup:admin"]},
+"acls": [{"action": "accept", "src": ["autogroup:admin"], "dst": ["tag:beni-jetson:22,8889"]}]
 ```
 
-4. Install Tailscale on your PC as well and log in. You can then reach the robot from anywhere as `beni-jetson`.
+4. Install Tailscale on your PC as well and log in. You can then reach the robot from anywhere as `beni-jetson`. (On local home Wi-Fi, you can also connect directly via the Nano's local IP address).
 
 **C6. Install everything on the Nano.** This one command runs the setup scripts in order, and each script installs
 only what is missing. The list of what gets installed is in the appendix at the end of this file.
@@ -535,8 +534,10 @@ pc$ pip install "kaggle>=1.6,<1.7"
 pc$ kaggle datasets list -m                 # works = the key is fine
 ```
 
-**G2. Tailscale key for the brain.** In the Tailscale admin console, create a second auth key that is
-**ephemeral**, **reusable** and **pre-approved**, with the tag `tag:beni-brain`.
+**G2. Set up the free Cloudflare Worker Relay.** Tailscale gets detected and killed within 15 seconds by Kaggle's container supervisor. Instead, Beni uses a **free, permanent Cloudflare Worker WebSocket Relay** (`cloudflare/worker.js`):
+1. In `cloudflare/`, run `npx wrangler login` followed by `npx wrangler deploy`.
+2. Wrangler automatically runs the SQLite Durable Object migration and links the `RELAY` binding.
+3. Your permanent relay URL is: `wss://beni-relay.<your-subdomain>.workers.dev` (e.g. `wss://beni-relay.impjrimpjr.workers.dev`).
 
 **G3. Pick a shared password.** The robot and the brain must use the same token:
 
@@ -551,7 +552,7 @@ Keep this string. You'll use it in G4 and in Part H.
 | Secret | Value |
 |---|---|
 | `BENI_TOKEN` | the string from G3 (required) |
-| `TS_AUTHKEY` | the `tag:beni-brain` key from G2 (required) |
+| `BENI_RELAY_URL` | `wss://beni-relay.<your-subdomain>.workers.dev` from G2 (required) |
 | `HF_TOKEN` | a Hugging Face read token (recommended, for faster model downloads) |
 | `BENI_HOME_CITY`, `BENI_TZ` | your city and time zone, e.g. `Colombo`, `Asia/Colombo` (optional) |
 
@@ -603,7 +604,7 @@ nano$ sudoedit /etc/beni/beni.env
 | Setting | What to put |
 |---|---|
 | `BENI_TOKEN` | the same string as the Kaggle secret (G3) |
-| `BENI_BRAIN_URL` | leave as `ws://beni-brain:8765/ws` (or `ws://<pc-ip>:8765/ws` to use the PC stub from A4) |
+| `BENI_BRAIN_URL` | `wss://beni-relay.<your-subdomain>.workers.dev/robot` (or `ws://<pc-ip>:8765/ws` to use the PC stub from A4) |
 | `KAGGLE_KERNEL` | `<you>/beni-brain` |
 | `HF_TOKEN`, `HF_BACKUP_REPO` | optional nightly memory backup to a private Hugging Face dataset |
 | `BENI_DETECTOR` | `yolo26n` (default) or `yolov8n` |
@@ -648,11 +649,12 @@ nano$ cd ~/beni && make status                       # every unit should be "act
 nano$ journalctl -u beni-agent -f                    # watch for "link up"
 ```
 
-**H4. Talk to it.** When the brain is up, check it, then say the wake word ("Hey Beni") and ask something:
+**H4. Talk to it.** When the brain is up, check its status, then say the wake word ("Hey Beni") and ask something:
 
 ```bash
-nano$ tailscale status | grep beni-brain
-nano$ curl -s http://beni-brain:8765/health
+curl -s https://beni-relay.<your-subdomain>.workers.dev/health
+# {"status": "ok", "brain_connected": true, "robot_connected": true, ...}
+nano$ journalctl -u beni-agent -f                    # watch for "brain online via ..."
 ```
 
 **H5. Watch the cameras.** On any device on your tailnet, open `http://<jetson-tailscale-ip>:8889/teleop`.

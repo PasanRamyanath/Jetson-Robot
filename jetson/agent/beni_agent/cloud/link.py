@@ -27,7 +27,15 @@ def _unpack(b):
 
 
 def bulk_url(ws_url):
-    return ws_url[:-3] + "/bulk" if ws_url.endswith("/ws") else ws_url.rstrip("/") + "/bulk"
+    if "?" in ws_url:
+        base, query = ws_url.split("?", 1)
+        b = base[:-3] + "/bulk" if base.endswith("/ws") else (base[:-6] + "/bulk" if base.endswith("/robot") else base.rstrip("/") + "/bulk")
+        return f"{b}?{query}"
+    if ws_url.endswith("/ws"):
+        return ws_url[:-3] + "/bulk"
+    if ws_url.endswith("/robot"):
+        return ws_url[:-6] + "/bulk"
+    return ws_url.rstrip("/") + "/bulk"
 
 
 class CloudLink:
@@ -58,7 +66,10 @@ class CloudLink:
             await self._wanted.wait()
             for url in self.urls:
                 try:
-                    async with websockets.connect(url, max_size=8 << 20, ping_interval=HB_S, ping_timeout=2 * HB_S,
+                    connect_url = url
+                    if self.token and "?" not in url and ("workers.dev" in url or "relay" in url):
+                        connect_url = f"{url}?token={self.token}"
+                    async with websockets.connect(connect_url, max_size=8 << 20, ping_interval=HB_S, ping_timeout=2 * HB_S,
                                                   compression=None, open_timeout=5, close_timeout=2) as ws:
                         await ws.send(_pack({"type": "hello", "token": self.token, "robot_id": self.robot_id,
                                              "versions": VERSIONS, "memory_rev": self.memory_rev(),
@@ -81,6 +92,10 @@ class CloudLink:
                                 except Exception:
                                     f = None
                                 if not isinstance(f, dict):
+                                    if isinstance(raw, str) and "peer_disconnected" in raw:
+                                        log.info("brain disconnected from relay")
+                                        await ws.close()
+                                        break
                                     log.warning("dropping a malformed frame (%d bytes)", len(raw))
                                     continue
                                 if f.get("type") == "heartbeat":

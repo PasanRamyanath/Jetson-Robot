@@ -68,18 +68,19 @@ This does the following:
 The services run as `beni` from `/opt/beni`, so your home must be readable. On 18.04 it is (0755). If you tightened
 it, run `chmod 755 ~`.
 
-## 2.4 System tuning, Docker, Tailscale, the py3.8 venv, MediaMTX and DeepStream-Yolo
+## 2.4 System tuning, Docker, Tailscale (optional), the py3.8 venv, MediaMTX and DeepStream-Yolo
 
-First create a Tailscale auth key. In the Tailscale admin console, create a **reusable, pre-approved** key tagged
-`tag:beni-jetson`. Then add this to the ACL:
+Tailscale is optional: it allows you to SSH into the Nano and watch teleop streams from your PC from outside home
+(the robot and Kaggle brain communicate over the Cloudflare Worker Relay, [04 §4.2](04_KAGGLE_BRAIN.md#42-cloudflare-worker-websocket-relay-100-free-non-vpn)).
+
+To enable PC remote access, create a Tailscale auth key tagged `tag:beni-jetson` (reusable, pre-approved), and in ACL:
 
 ```json
-"tagOwners": {"tag:beni-jetson": ["autogroup:admin"], "tag:beni-brain": ["autogroup:admin"]},
-"acls": [{"action": "accept", "src": ["tag:beni-jetson"], "dst": ["tag:beni-brain:8765"]},
-         {"action": "accept", "src": ["autogroup:admin"], "dst": ["tag:beni-jetson:22,8889"]}]
+"tagOwners": {"tag:beni-jetson": ["autogroup:admin"]},
+"acls": [{"action": "accept", "src": ["autogroup:admin"], "dst": ["tag:beni-jetson:22,8889"]}]
 ```
 
-The second rule lets your own devices SSH in and watch the teleop stream (WebRTC on :8889).
+This lets your PC SSH in and watch the teleop stream (WebRTC on :8889).
 
 ```bash
 nano$ cd ~/beni
@@ -172,7 +173,7 @@ nano$ sudoedit /etc/beni/beni.env
 | Key | Value |
 |---|---|
 | `BENI_TOKEN` | a long random string (`openssl rand -hex 24`), the same as the Kaggle secret |
-| `BENI_BRAIN_URL` | keep `ws://beni-brain:8765/ws` (the brain's tailnet name) |
+| `BENI_BRAIN_URL` | `wss://beni-relay.<your-subdomain>.workers.dev/robot` (Cloudflare Worker relay) |
 | `KAGGLE_KERNEL` | `<kaggle-user>/beni-brain` |
 | `HF_TOKEN`, `HF_BACKUP_REPO` | optional: nightly memory backup to a private HF dataset |
 | `BENI_DETECTOR` | `yolo26n` (default) or `yolov8n` after the bake-off ([03](03_MODELS_ENGINES.md)) |

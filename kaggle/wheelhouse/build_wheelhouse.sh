@@ -7,7 +7,6 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 OUT="${OUT:-$ROOT/build/wheelhouse}"
 KUSER="${KAGGLE_USERNAME:-$(python3 -c 'import json,os;print(json.load(open(os.path.expanduser("~/.kaggle/kaggle.json")))["username"])' 2>/dev/null || echo YOUR_KAGGLE_USERNAME)}"
-TS_VER="${TS_VER:-1.84.3}"
 mkdir -p "$OUT/brain" "$OUT/vllm"
 
 build() {   # SRC=repo root, OUT=wheelhouse dir; must run on linux x86_64 with python3.12
@@ -29,7 +28,6 @@ else
     bash -c "$(declare -f build); build"
 fi
 
-curl -fsSL -o "$OUT/tailscale_${TS_VER}_amd64.tgz" "https://pkgs.tailscale.com/stable/tailscale_${TS_VER}_amd64.tgz"
 curl -fsSL -o "$OUT/cloudflared" https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
 chmod +x "$OUT/cloudflared"
 du -sh "$OUT"
