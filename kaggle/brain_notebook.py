@@ -56,43 +56,54 @@ if not shutil.which("uv"):
     sh(f"install -m 755 {WH}/uv /usr/local/bin/uv" if os.path.exists(f"{WH}/uv") else "pip install -q uv")
 
 if os.path.exists(f"{WH}/vllm"):
-    sh(f"uv venv -q /kaggle/tmp/venv_vllm --python 3.12 && VIRTUAL_ENV=/kaggle/tmp/venv_vllm "
-       f"uv pip install -q --no-index --find-links {WH}/vllm vllm")
+    sh(f"uv venv -q /kaggle/tmp/venv_vllm --python 3.12 && uv pip install --python /kaggle/tmp/venv_vllm -q --no-index --find-links {WH}/vllm vllm")
 else:
     print("--> Wheelhouse not attached; installing vLLM from PyPI...", flush=True)
-    sh("uv venv -q /kaggle/tmp/venv_vllm --python 3.12 && VIRTUAL_ENV=/kaggle/tmp/venv_vllm "
-       "uv pip install -q vllm")
+    sh("uv venv -q /kaggle/tmp/venv_vllm --python 3.12 && uv pip install --python /kaggle/tmp/venv_vllm -q vllm")
 
 if os.path.exists(f"{WH}/brain"):
     BRAIN_REQ = (f"-r {WH}/brain/requirements-brain.txt" if os.path.exists(f"{WH}/brain/requirements-brain.txt")
                  else "'beni-brain[gpu]' 'transformers>=4.46,<4.50' timm einops pillow")   # older wheelhouse: same set
-    sh(f"uv venv -q /kaggle/tmp/venv_brain --python 3.12 && VIRTUAL_ENV=/kaggle/tmp/venv_brain "
-       f"uv pip install -q --no-index --find-links {WH}/brain beni-brain beni-common {BRAIN_REQ}")
+    sh(f"uv venv --system-site-packages -q /kaggle/tmp/venv_brain --python 3.12 && "
+       f"uv pip install --python /kaggle/tmp/venv_brain -q --no-index --find-links {WH}/brain beni-brain beni-common {BRAIN_REQ}")
 else:
     print("--> Wheelhouse not attached; cloning repo and installing dependencies...", flush=True)
     sh("rm -rf /kaggle/tmp/beni-repo && git clone -q --depth 1 https://github.com/PasanRamyanath/Jetson-Robot.git /kaggle/tmp/beni-repo")
-    sh("uv venv -q /kaggle/tmp/venv_brain --python 3.12 && VIRTUAL_ENV=/kaggle/tmp/venv_brain "
-       "uv pip install -q -r /kaggle/tmp/beni-repo/kaggle/wheelhouse/requirements-brain.txt "
+    sh("uv venv --system-site-packages -q /kaggle/tmp/venv_brain --python 3.12 && "
+       "uv pip install --python /kaggle/tmp/venv_brain "
+       "-r /kaggle/tmp/beni-repo/kaggle/wheelhouse/requirements-brain.txt "
        "-e /kaggle/tmp/beni-repo/shared -e /kaggle/tmp/beni-repo/kaggle")
 PY_BRAIN = "/kaggle/tmp/venv_brain/bin/python"
 
 # %% Cell 3: models (Kaggle inputs when attached, otherwise the HF Hub; /kaggle/tmp is fast local disk)
-sh(f"""{PY_BRAIN} - <<'EOF'
-import os, shutil
-from huggingface_hub import snapshot_download
 tok = os.environ.get("HF_TOKEN") or None
-if not {bool(LLM_LOCAL)!r}:
-    snapshot_download("{LLM_REPO}", local_dir="{MODELS}/llm", token=tok)
-snapshot_download("mobiuslabsgmbh/faster-whisper-large-v3-turbo", local_dir="{MODELS}/whisper", token=tok)
-d = snapshot_download("Xenova/bge-small-en-v1.5", local_dir="{MODELS}/bge-src", token=tok,
+try:
+    from huggingface_hub import snapshot_download
+except ImportError:
+    sh("pip install -q huggingface_hub")
+    from huggingface_hub import snapshot_download
+
+if not LLM_LOCAL:
+    print(f"--> Downloading LLM: {LLM_REPO}...", flush=True)
+    snapshot_download(LLM_REPO, local_dir=str(MODELS / "llm"), token=tok)
+
+print("--> Downloading Whisper large-v3-turbo...", flush=True)
+snapshot_download("mobiuslabsgmbh/faster-whisper-large-v3-turbo", local_dir=str(MODELS / "whisper"), token=tok)
+
+print("--> Downloading bge-small...", flush=True)
+d = snapshot_download("Xenova/bge-small-en-v1.5", local_dir=str(MODELS / "bge-src"), token=tok,
                       allow_patterns=["tokenizer.json", "onnx/model_quantized.onnx"])
-os.makedirs("{MODELS}/bge-small", exist_ok=True)
-shutil.copy(d + "/tokenizer.json", "{MODELS}/bge-small/tokenizer.json")
-shutil.copy(d + "/onnx/model_quantized.onnx", "{MODELS}/bge-small/model_quantized.onnx")
-snapshot_download("hexgrad/Kokoro-82M", token=tok)          # into the HF cache used by KPipeline
-snapshot_download("microsoft/Florence-2-large", token=tok)  # locate tool + sleep-replay captions (GPU1, ~1.6 GB)
-snapshot_download("BAAI/bge-reranker-v2-m3", token=tok)     # §11.6 memory rerank (GPU1, ~1.1 GB FP16)
-EOF""")
+bge_dest = MODELS / "bge-small"
+bge_dest.mkdir(parents=True, exist_ok=True)
+shutil.copy(os.path.join(d, "tokenizer.json"), str(bge_dest / "tokenizer.json"))
+shutil.copy(os.path.join(d, "onnx", "model_quantized.onnx"), str(bge_dest / "model_quantized.onnx"))
+
+print("--> Downloading Kokoro, Florence-2, and bge-reranker...", flush=True)
+snapshot_download("hexgrad/Kokoro-82M", token=tok)
+snapshot_download("microsoft/Florence-2-large", token=tok)
+snapshot_download("BAAI/bge-reranker-v2-m3", token=tok)
+print("--> Model downloads complete!", flush=True)
+
 # Optional CosyVoice2 voice (§10.5): BENI_TTS=cosyvoice plus a reference wav attached as a Kaggle input.
 TTS = os.environ.get("BENI_TTS", "kokoro")
 PROMPT_WAV = next(iter(glob.glob("/kaggle/input/*/beni_voice*.wav")), "")
