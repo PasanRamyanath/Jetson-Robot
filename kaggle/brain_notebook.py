@@ -72,8 +72,8 @@ else:
     sh("uv venv --system-site-packages -q /kaggle/tmp/venv_brain --python 3.12 && "
        "uv pip install --python /kaggle/tmp/venv_brain "
        "-r /kaggle/tmp/beni-repo/kaggle/wheelhouse/requirements-brain.txt "
-       "-e /kaggle/tmp/beni-repo/shared -e /kaggle/tmp/beni-repo/kaggle")
 PY_BRAIN = "/kaggle/tmp/venv_brain/bin/python"
+sh(f"{PY_BRAIN} -m spacy download en_core_web_sm || true")
 
 # %% Cell 3: models (Kaggle inputs when attached, otherwise the HF Hub; /kaggle/tmp is fast local disk)
 tok = os.environ.get("HF_TOKEN") or None
