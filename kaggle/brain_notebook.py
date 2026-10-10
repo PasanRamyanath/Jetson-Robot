@@ -69,11 +69,11 @@ if os.path.exists(f"{WH}/brain"):
     sh(f"uv venv -q /kaggle/tmp/venv_brain --python 3.12 && VIRTUAL_ENV=/kaggle/tmp/venv_brain "
        f"uv pip install -q --no-index --find-links {WH}/brain beni-brain beni-common {BRAIN_REQ}")
 else:
-    print("--> Installing beni-brain from GitHub repo...", flush=True)
+    print("--> Wheelhouse not attached; cloning repo and installing dependencies...", flush=True)
+    sh("rm -rf /kaggle/tmp/beni-repo && git clone -q --depth 1 https://github.com/PasanRamyanath/Jetson-Robot.git /kaggle/tmp/beni-repo")
     sh("uv venv -q /kaggle/tmp/venv_brain --python 3.12 && VIRTUAL_ENV=/kaggle/tmp/venv_brain "
-       "uv pip install -q 'git+https://github.com/PasanRamyanath/Jetson-Robot.git#subdirectory=shared[memory]' "
-       "'git+https://github.com/PasanRamyanath/Jetson-Robot.git#subdirectory=kaggle[gpu]' "
-       "'transformers>=4.46,<4.50' timm einops pillow")
+       "uv pip install -q -r /kaggle/tmp/beni-repo/kaggle/wheelhouse/requirements-brain.txt "
+       "-e /kaggle/tmp/beni-repo/shared -e /kaggle/tmp/beni-repo/kaggle")
 PY_BRAIN = "/kaggle/tmp/venv_brain/bin/python"
 
 # %% Cell 3: models (Kaggle inputs when attached, otherwise the HF Hub; /kaggle/tmp is fast local disk)
