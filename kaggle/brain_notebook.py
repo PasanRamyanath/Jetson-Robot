@@ -54,12 +54,26 @@ def sh(cmd, bg=False, log=None, env=None):
 # %% Cell 2: isolated venvs from the wheelhouse (vLLM pins its own torch; keep it away from the audio stack)
 if not shutil.which("uv"):
     sh(f"install -m 755 {WH}/uv /usr/local/bin/uv" if os.path.exists(f"{WH}/uv") else "pip install -q uv")
-sh(f"uv venv -q /kaggle/tmp/venv_vllm --python 3.12 && VIRTUAL_ENV=/kaggle/tmp/venv_vllm "
-   f"uv pip install -q --no-index --find-links {WH}/vllm vllm")
-BRAIN_REQ = (f"-r {WH}/brain/requirements-brain.txt" if os.path.exists(f"{WH}/brain/requirements-brain.txt")
-             else "'beni-brain[gpu]' 'transformers>=4.46,<4.50' timm einops pillow")   # older wheelhouse: same set
-sh(f"uv venv -q /kaggle/tmp/venv_brain --python 3.12 && VIRTUAL_ENV=/kaggle/tmp/venv_brain "
-   f"uv pip install -q --no-index --find-links {WH}/brain beni-brain beni-common {BRAIN_REQ}")
+
+if os.path.exists(f"{WH}/vllm"):
+    sh(f"uv venv -q /kaggle/tmp/venv_vllm --python 3.12 && VIRTUAL_ENV=/kaggle/tmp/venv_vllm "
+       f"uv pip install -q --no-index --find-links {WH}/vllm vllm")
+else:
+    print("--> Wheelhouse not attached; installing vLLM from PyPI...", flush=True)
+    sh("uv venv -q /kaggle/tmp/venv_vllm --python 3.12 && VIRTUAL_ENV=/kaggle/tmp/venv_vllm "
+       "uv pip install -q vllm")
+
+if os.path.exists(f"{WH}/brain"):
+    BRAIN_REQ = (f"-r {WH}/brain/requirements-brain.txt" if os.path.exists(f"{WH}/brain/requirements-brain.txt")
+                 else "'beni-brain[gpu]' 'transformers>=4.46,<4.50' timm einops pillow")   # older wheelhouse: same set
+    sh(f"uv venv -q /kaggle/tmp/venv_brain --python 3.12 && VIRTUAL_ENV=/kaggle/tmp/venv_brain "
+       f"uv pip install -q --no-index --find-links {WH}/brain beni-brain beni-common {BRAIN_REQ}")
+else:
+    print("--> Installing beni-brain from GitHub repo...", flush=True)
+    sh("uv venv -q /kaggle/tmp/venv_brain --python 3.12 && VIRTUAL_ENV=/kaggle/tmp/venv_brain "
+       "uv pip install -q 'git+https://github.com/PasanRamyanath/Jetson-Robot.git#subdirectory=shared[memory]' "
+       "'git+https://github.com/PasanRamyanath/Jetson-Robot.git#subdirectory=kaggle[gpu]' "
+       "'transformers>=4.46,<4.50' timm einops pillow")
 PY_BRAIN = "/kaggle/tmp/venv_brain/bin/python"
 
 # %% Cell 3: models (Kaggle inputs when attached, otherwise the HF Hub; /kaggle/tmp is fast local disk)
