@@ -1,5 +1,5 @@
 {
-  "id": "YOUR_KAGGLE_USERNAME/beni-brain",
+  "id": "pjramyanath/beni-brain",
   "title": "beni-brain",
   "code_file": "brain_notebook.py",
   "language": "python",
@@ -8,7 +8,7 @@
   "enable_gpu": true,
   "enable_internet": true,
   "machine_shape": "NvidiaTeslaT4",
-  "dataset_sources": ["YOUR_KAGGLE_USERNAME/beni-wheelhouse"],
+  "dataset_sources": ["pjramyanath/beni-wheelhouse"],
   "competition_sources": [],
   "kernel_sources": [],
   "model_sources": []
