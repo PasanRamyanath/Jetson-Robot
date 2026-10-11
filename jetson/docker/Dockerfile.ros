@@ -12,8 +12,7 @@ ENV DEBIAN_FRONTEND=noninteractive ROS_DISTRO=humble ROS_ROOT=/opt/ros/humble \
 
 # gcc-9: 18.04's gcc-7 has no <filesystem> (Nav2 humble, BT.CPP). libstdc++ from the PPA stays ABI-compatible with
 # the gcc-7-built base, so the underlay does not need rebuilding.
-RUN rm -f /etc/apt/sources.list.d/ros*.list && \
-    apt-get update && apt-get install -y --no-install-recommends software-properties-common && \
+RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common && \
     add-apt-repository -y ppa:ubuntu-toolchain-r/test && apt-get update && \
     apt-get install -y --no-install-recommends g++-9 libzmq3-dev libceres-dev libsuitesparse-dev liblapack-dev \
       libtbb-dev libeigen3-dev libgraphicsmagick++1-dev libyaml-cpp-dev libgeographic-dev uuid-dev libncurses5-dev \
