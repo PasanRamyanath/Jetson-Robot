@@ -35,4 +35,34 @@ x = re.sub(r"^\s*<(?:build_|exec_)?depend>(?:rviz_\w+|libqt5-\w+|qtbase5-dev)</(
            x, flags=re.M)
 x = re.sub(r"^\s*<rviz_common [^>]*/>\s*\n", "", x, flags=re.M)
 open(pkg, "w").write(x)
+
+# Patch karto_sdk to find TBB on Ubuntu 18.04 (no TBBConfig.cmake in 18.04's libtbb-dev)
+import os, shutil
+karto_path = os.path.join(root, "lib", "karto_sdk", "CMakeLists.txt")
+if os.path.exists(karto_path):
+    k_src = open(karto_path).read()
+    tbb_block = """
+find_package(TBB QUIET)
+if(NOT TARGET TBB::tbb)
+  find_library(TBB_LIB NAMES tbb)
+  find_path(TBB_INC NAMES tbb/tbb.h)
+  add_library(TBB::tbb UNKNOWN IMPORTED)
+  set_target_properties(TBB::tbb PROPERTIES
+    IMPORTED_LOCATION "${TBB_LIB}"
+    INTERFACE_INCLUDE_DIRECTORIES "${TBB_INC}"
+  )
+endif()
+"""
+    k_src = re.sub(r"find_package\(TBB\b[^)]*\)", tbb_block.strip(), k_src)
+    open(karto_path, "w").write(k_src)
+    print("karto_sdk TBB discovery patched")
+
+cmake_dir = os.path.join(root, "CMake")
+lower_cmake_dir = os.path.join(root, "cmake")
+if os.path.isdir(cmake_dir) and not os.path.exists(lower_cmake_dir):
+    try:
+        shutil.copytree(cmake_dir, lower_cmake_dir)
+    except Exception:
+        pass
+
 print("slam_toolbox patched headless")
