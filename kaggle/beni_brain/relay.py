@@ -15,6 +15,15 @@ RECONNECT_BASE_S = 1.0
 RECONNECT_MAX_S = 30.0
 
 
+def _is_closed(ws):
+    if ws is None:
+        return True
+    st = getattr(ws, "state", None)
+    if st is not None:
+        return getattr(st, "name", "") in ("CLOSING", "CLOSED") or st in (2, 3)
+    return getattr(ws, "closed", False)
+
+
 class RelayBridge:
     """Manages outbound WebSocket connections from the Kaggle brain to the Cloudflare Worker relay."""
 
@@ -99,7 +108,7 @@ class RelayBridge:
                     continue
 
                 # If local connection is not active, connect to the local gateway
-                if ws_local is None or ws_local.closed:
+                if _is_closed(ws_local):
                     try:
                         ws_local = await websockets.connect(
                             f"ws://127.0.0.1:{self.local_port}/ws",
@@ -129,7 +138,7 @@ class RelayBridge:
         finally:
             if pump_task:
                 pump_task.cancel()
-            if ws_local and not ws_local.closed:
+            if not _is_closed(ws_local):
                 await ws_local.close()
 
     async def _pump_local_to_relay(self, ws_local, ws_relay):
@@ -190,7 +199,7 @@ class RelayBridge:
                         pump_task = None
                     continue
 
-                if ws_local is None or ws_local.closed:
+                if _is_closed(ws_local):
                     try:
                         ws_local = await websockets.connect(
                             f"ws://127.0.0.1:{self.local_port}/bulk",
@@ -218,7 +227,7 @@ class RelayBridge:
         finally:
             if pump_task:
                 pump_task.cancel()
-            if ws_local and not ws_local.closed:
+            if not _is_closed(ws_local):
                 await ws_local.close()
 
 
