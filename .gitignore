@@ -1,5 +1,4 @@
 # Credentials & Secrets
-kaggle*.json
 kaggle_output/
 *.env
 !*.env.example
